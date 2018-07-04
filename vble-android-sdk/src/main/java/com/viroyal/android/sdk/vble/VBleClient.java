@@ -81,7 +81,7 @@ public class VBleClient {
             }
         }
         Log.d(TAG, "VBleClient_InitBLEClient: InitBLEClient successfully! Start scan BLE Service...");
-        ConnectBLEService(context);
+        ConnectBLEService();
         return true;
     }
 
@@ -145,8 +145,16 @@ public class VBleClient {
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
             Log.d(TAG, "BLEService.onLeScan: Scam successful! BLE Device:" + device.getAddress());
             // 扫描得到指定设备的蓝牙信息,并连接此设备
-            // TODO : 实际设备使用Q11
-            if ("BLE 55B.02".equals(device.getName())) {
+            // TODO : 需要处理多个设备同名的情况
+            boolean isFindSpecDevice = false;
+
+            if ("BLE 55B.02".equals(device.getName())) {// ‘BLE 55B.02’ for inner test devices ...
+                isFindSpecDevice = true;
+            } else if ("Q11".equals(device.getName()) || "Yujia_Ble".equals(device.getName())) {
+                isFindSpecDevice = true;
+            }
+
+            if (isFindSpecDevice) {
                 Log.d(TAG, "onLeScan: Find the Spec device!");
                 mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
                 if (mBluetoothGatt != null) {
@@ -163,7 +171,7 @@ public class VBleClient {
         }
     };
 
-    private void ConnectBLEService(final Context context) {
+    private void ConnectBLEService() {
         final UUID[] mSpecUUID = {SPECIFIC_SERVICE_UUID};
 
         if (mBluetoothAdapter != null) {
@@ -178,12 +186,12 @@ public class VBleClient {
     }
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
-        @Override
-        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            Log.d(TAG, "GattCallback: onConnectionStateChange: newState" + newState);
+            @Override
+            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+                Log.d(TAG, "GattCallback: onConnectionStateChange: newState" + newState);
 
-            VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
-                    newState,
+                VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
+                        newState,
                     null);
             ProcessResultReport(mVBleCallback, result);
 

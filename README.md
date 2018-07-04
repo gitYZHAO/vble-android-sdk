@@ -1,5 +1,5 @@
 # viroyal-ble-android-sdk 简介
-一个控制BLE GATT Client 的SDK 及其示例。
+一个控制BLE GATT Client 的SDK(vble-android-sdk) 及其 示例。
 
 # 环境要求
 Android系统版本：5.0 及以上。
