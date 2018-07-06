@@ -14,6 +14,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.os.Build;
+import android.os.ParcelUuid;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -25,17 +26,13 @@ public class VBleClient {
 
     public final static String VBLE_COMMAND_CALL_ANSWER = "CALL_ANSWER";
     public final static String VBLE_COMMAND_CALL_END = "CALL_END";
+    public final static String VBLE_COMMAND_MAKE_CALL = "MAKE_CALL";
     public final static String VBLE_COMMAND_WAKE_UP = "WAKE_UP";
     public final static String VBLE_COMMAND_SET_FM = "SET_FM";
 
     // 实际设备中使用的UUID
-//    private static final UUID SPECIFIC_SERVICE_UUID = UUID.fromString("0000ff10-0000-1000-8000-00805f9b34fb");
-//    private static final UUID READWRITE_CHARACTERISTIC_UUID = UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb");
-
-    // 测试使用以下两个UUID 避免与实际设备混淆
-    private static final UUID SPECIFIC_SERVICE_UUID = UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb");
-    private static final UUID READWRITE_CHARACTERISTIC_UUID = UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb");
-
+    private static final UUID SPECIFIC_SERVICE_UUID = UUID.fromString("0000ff10-0000-1000-8000-00805f9b34fb");
+    private static final UUID READWRITE_CHARACTERISTIC_UUID = UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb");
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
@@ -43,12 +40,14 @@ public class VBleClient {
 
     private Context mContext;
     private VBleCallback mVBleCallback;
+    private int mVBleStatus = VBleResult.VBLE_STATUS_DISCONNECTED;
 
     private String[][] command = {
             {VBLE_COMMAND_CALL_ANSWER, "AT+CALLANSW", "+CALLANSW"},
             {VBLE_COMMAND_CALL_END, "AT+CALLEND", "+CALLEND"},
+            {VBLE_COMMAND_MAKE_CALL, "AT+DIAL=", "+DIAL"},
             {VBLE_COMMAND_WAKE_UP, "AT+WAKEUP", "+WAKEUP"},
-            {VBLE_COMMAND_SET_FM, "AT+FMFREQ=", "+FMFREQ="}
+            {VBLE_COMMAND_SET_FM, "AT+FMFREQ=", "+FMFREQ"}
     };
 
     public VBleClient(Context context, VBleCallback callback) {
@@ -85,23 +84,23 @@ public class VBleClient {
         return true;
     }
 
-    public boolean VBleClient_CallAnswerCommand() {
-        return VBleClient_SendCommand(VBLE_COMMAND_CALL_ANSWER);
+    public void VBleClient_DisconnectBLEClient() {
+        if (mVBleStatus == VBleResult.VBLE_STATUS_ENABLE_GATT_CHARACTERISTIC) {
+            if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+                Log.d(TAG, "VBleClient_DisconnectBLEClient: BluetoothAdapter not initialized");
+                return;
+            }
+            mBluetoothGatt.disconnect();
+        } else {
+            Log.d(TAG, "VBleClient_DisconnectBLEClient: Can not disconnect BLE Service, status=" + mVBleStatus);
+        }
     }
 
-    public boolean VBleClient_CallEndCommand() {
-        return VBleClient_SendCommand(VBLE_COMMAND_CALL_END);
-    }
-
-    public boolean VBleClient_FMReqCommand(String fmReq) {
-        return VBleClient_SendCommand(VBLE_COMMAND_SET_FM, fmReq);
-    }
-
-    private boolean VBleClient_SendCommand(String str) {
+    public boolean VBleClient_SendCommand(String str) {
         return VBleClient_SendCommand(str, null);
     }
 
-    private boolean VBleClient_SendCommand(String str, String fmReq) {
+    public boolean VBleClient_SendCommand(String str, String ext) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null || mNotifyCharacteristic == null) {
             Log.w(TAG, "BluetoothAdapter not initialized : mBluetoothAdapter=" + mBluetoothAdapter
                     + "  ,mBluetoothGatt=" + mBluetoothGatt
@@ -112,26 +111,26 @@ public class VBleClient {
 
         for (String[] s : command) {
             if (s[0].equals(str)) {
+                if (s[1] == null) return false;
+                if (s[1].length() == 0) return false;
+
+                String chara = s[1];
 
                 byte[] arrayOfByte1 = new byte[20];
                 byte[] arrayOfByte2 = new byte[20];
                 arrayOfByte2[0] = 0;
                 mNotifyCharacteristic.setValue(arrayOfByte2[0], 17, 0);
 
-                if (s[1].length() > 0) {
-                    // 设置FM频段有参数，需要特殊对待
-                    // TODO : 可以判断是否有“=” ，然后进行特殊处理
-                    if (VBLE_COMMAND_SET_FM.equals(s[0]) && fmReq != null) {
-                        int intFMReq = Integer.parseInt(fmReq);
-                        if (intFMReq <= 760 || intFMReq >= 1080)
-                            return false;
-
-                        s[1] += fmReq;
-                    }
-                    Log.d(TAG, "VBleClient_SendCommand: sendCharacteristic=" + s[1]);
-                    arrayOfByte1 = s[1].getBytes();
+                // NOTE:
+                // 1. 带参数命令包含"=" 符号
+                // 2. 参数不做判断，只要不为空，变添加到AT命令末尾
+                if (s[1].contains("=") && ext != null) {
+                    chara += ext;
                 }
+                Log.d(TAG, "VBleClient_SendCommand: sendCharacteristic=" + chara);
+                arrayOfByte1 = chara.getBytes();
                 mNotifyCharacteristic.setValue(arrayOfByte1);
+
 
                 return mBluetoothGatt.writeCharacteristic(mNotifyCharacteristic);
             }
@@ -155,7 +154,17 @@ public class VBleClient {
             }
 
             if (isFindSpecDevice) {
-                Log.d(TAG, "onLeScan: Find the Spec device!");
+                Log.d(TAG, "onLeScan: Find the Spec device：" + device.getName()
+                        + ",add=" + device.getAddress()
+                        + " ,uuid=" + device.getUuids());
+
+                mVBleStatus = VBleResult.VBLE_STATUS_SCANNED;
+                VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
+                        VBleResult.VBLE_STATUS_SCANNED,
+                        null);
+                ProcessResultReport(mVBleCallback, result);
+                ProcessUnsolicitedMsg(mVBleCallback, device.getName());
+
                 mBluetoothGatt = device.connectGatt(mContext, false, mGattCallback);
                 if (mBluetoothGatt != null) {
                     if (!mBluetoothGatt.connect()) {
@@ -181,25 +190,38 @@ public class VBleClient {
 
             //扫描所有ble设备
             boolean ret = mBluetoothAdapter.startLeScan(mLeScanCallback);
+            if (ret) {
+                // 更新状态 - 扫描中...
+                mVBleStatus = VBleResult.VBLE_STATUS_SCANNING;
+
+                VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
+                        VBleResult.VBLE_STATUS_SCANNING,
+                        null);
+                ProcessResultReport(mVBleCallback, result);
+
+            }
             Log.d(TAG, "ConnectBLEService: startLeScan ret=" + ret);
         }
     }
 
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
-            @Override
-            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                Log.d(TAG, "GattCallback: onConnectionStateChange: newState" + newState);
-
-                VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
-                        newState,
-                    null);
-            ProcessResultReport(mVBleCallback, result);
+        @Override
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            Log.d(TAG, "GattCallback: onConnectionStateChange: newState" + newState);
+            ProcessResultReport(mVBleCallback,
+                    new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
+                            newState,
+                            null));
 
             // 当GATT连接完成后，开始发现其服务
-            if (newState == VBleResult.VBLE_STATUS_CONNECTED) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                mVBleStatus = VBleResult.VBLE_STATUS_CONNECTED;
+
                 if (!mBluetoothGatt.discoverServices()) {
                     Log.d(TAG, "onConnectionStateChange:ERROR-BluetoothGatt.discoverServices is Fail!");
                 }
+            } else {
+                mVBleStatus = VBleResult.VBLE_STATUS_DISCONNECTED;
             }
         }
 
@@ -218,17 +240,18 @@ public class VBleClient {
                 mNotifyCharacteristic = gattServices.getCharacteristic(READWRITE_CHARACTERISTIC_UUID);
             }
 
-            mBluetoothGatt.setCharacteristicNotification(mNotifyCharacteristic, true);
+            EnableCharacteristicNotify();
+
+            // For now , no descriptors form service ...
             for (BluetoothGattDescriptor dp : mNotifyCharacteristic.getDescriptors()) {
                 dp.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                 mBluetoothGatt.writeDescriptor(dp);
-                mBluetoothGatt.readDescriptor(dp);
             }
 
-            VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
+            mVBleStatus = VBleResult.VBLE_STATUS_ENABLE_GATT_CHARACTERISTIC;
+            ProcessResultReport(mVBleCallback, new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
                     VBleResult.VBLE_STATUS_ENABLE_GATT_CHARACTERISTIC,
-                    null);
-            ProcessResultReport(mVBleCallback, result);
+                    null));
         }
 
         //被读
@@ -238,12 +261,15 @@ public class VBleClient {
                                          int status) {
             Log.d(TAG, "GattCallback: onCharacteristicRead: characteristic=" + new String(characteristic.getValue())
                     + " , status=" + status);
+            EnableCharacteristicNotify();
         }
 
         //特性改变
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
+            EnableCharacteristicNotify();
+
             // 接收和发送消息，产生此回调
             byte[] msgByte = characteristic.getValue();
             String msgString = new String(msgByte);
@@ -264,11 +290,22 @@ public class VBleClient {
                                           int status) {
             Log.d(TAG, "GattCallback: onCharacteristicWrite: characteristic=" + new String(characteristic.getValue())
                     + " ,status=" + status);
+            EnableCharacteristicNotify();
             /*
              * DO NOTHING... 在onCharacteristicChanged统一处理
              */
         }
     };
+
+    private void EnableCharacteristicNotify() {
+        if (mBluetoothGatt != null && mNotifyCharacteristic != null) {
+            boolean ret = mBluetoothGatt.setCharacteristicNotification(mNotifyCharacteristic, true);
+
+            if (!ret) {
+                Log.d(TAG, "EnableCharacteristicNotify is fail!");
+            }
+        }
+    }
 
     private boolean ProcessCommandCallback(VBleCallback callback, String repString) {
         if (repString == null) return false;

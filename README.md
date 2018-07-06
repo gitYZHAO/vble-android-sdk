@@ -27,40 +27,51 @@ compile project(':vble-android-sdk')
 
 初始化VBleClient，并使用VBleCallback回调接收状态和消息
 ```
-        mVBleClient = new VBleClient(getApplicationContext(), new VBleCallback() {
-            @Override
-            public void onVBleStatusCallback(VBleResult result) {
-                //获取BLE状态更新
-            }
+    mVBleClient = new VBleClient(getApplicationContext(), new VBleCallback() {
+        @Override
+        public void onVBleStatusCallback(VBleResult result) {
+            //获取BLE状态更新
+        }
 
-            @Override
-            public void onVBleCommandCallback(String whatCommand, boolean isSuccessful) {
-                //获取已知的命令的状态返回
-            }
-            
-            @Override
-            public void processUnsolicitedMsg(String unsolicitedMsg) {
-                //处理为止的消息上报
-            }
-        });
+        @Override
+        public void onVBleCommandCallback(String whatCommand, boolean isSuccessful) {
+            //获取已知的命令的状态返回
+        }
+
+        @Override
+        public void processUnsolicitedMsg(String unsolicitedMsg) {
+            //处理为止的消息上报
+        }
+    });
 ```
 
 初始化BLE Client的连接和获取指定的BLE characteristic
 ```
-                mVBleClient.VBleClient_InitBLEClient(getApplicationContext());
+        mVBleClient.VBleClient_InitBLEClient(getApplicationContext());
 ```
 
-使用以下几个接口发送（指定的）消息
+使用VBleClient_SendCommand接口发送（指定的）消息
 ```
-                // 发送接听电话消息
-                mVBleClient.VBleClient_CallAnswerCommand();
-                
-                // 发送挂断电话消息
-                mVBleClient.VBleClient_CallEndCommand();
-                
-                // 设置FM 频率，98.5 设置成 字符串 "985"
-                if (isCanSendCommand) {
-                    mVBleClient.VBleClient_FMReqCommand(fmReq);
-                } 
+
+    public final static String VBLE_COMMAND_CALL_ANSWER = "CALL_ANSWER";
+    public final static String VBLE_COMMAND_CALL_END = "CALL_END";
+    public final static String VBLE_COMMAND_MAKE_CALL = "MAKE_CALL";
+    public final static String VBLE_COMMAND_WAKE_UP = "WAKE_UP";
+    public final static String VBLE_COMMAND_SET_FM = "SET_FM";
+
+    // 发送接听电话消息
+    if (isCanSendCommand) {
+        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_ANSWER);
+    }
+
+    // 发送挂断电话消息
+    if (isCanSendCommand) {
+        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_END);
+    }
+
+    // 设置FM 频率，98.5 设置成 字符串 "985"
+    if (isCanSendCommand) {
+        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_SET_FM ,fmReq);
+    }
                 
 ```

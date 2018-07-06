@@ -11,6 +11,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -36,7 +37,9 @@ public class VbleSampleMainActivity extends AppCompatActivity {
 
     private Button mSendMsg;
     private Button mInitVBleClient;
+    private Button mDisconnectVBleClient;
     private Button mSendCommand;
+    private Button mSendCommand2;
     private EditText mSetFMReq;
     private TextView mVBleTextView;
 
@@ -48,21 +51,19 @@ public class VbleSampleMainActivity extends AppCompatActivity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case MSG_VBLE_CAN_SEND_COMMAND:
-                    if (mInitVBleClient != null) mInitVBleClient.setEnabled(false);
-                    if (mSendCommand != null) mSendCommand.setEnabled(true);
-                    if (mSendMsg != null) mSendMsg.setEnabled(true);
-                    break;
-
                 case MSG_VBLE_DISABLE_SEND_COMMAND:
-                    if (mInitVBleClient != null) mInitVBleClient.setEnabled(true);
-                    if (mSendCommand != null) mSendCommand.setEnabled(false);
-                    if (mSendMsg != null) mSendMsg.setEnabled(false);
+                    SetButtonView(isCanSendCommand);
                     break;
 
                 case MSG_VBLE_UNSOLICITED_MSG:
                     Log.d(TAG, "handleMessage: MSG_VBLE_UNSOLICITED_MSG: " + msg.obj);
                     if (mVBleTextView != null) {
                         mVBleTextView.append("接收到消息：" + (CharSequence) msg.obj + "\n");
+
+                        int offset = mVBleTextView.getLineCount() * mVBleTextView.getLineHeight();
+                        if (offset > mVBleTextView.getHeight()) {
+                            mVBleTextView.scrollTo(0, offset - mVBleTextView.getHeight());
+                        }
                     }
                     break;
                 case MSG_VBLE_STATUS_UPDATE_MSG:
@@ -142,6 +143,7 @@ public class VbleSampleMainActivity extends AppCompatActivity {
         mVBleTextView = (TextView) findViewById(R.id.receiveTextView);
         if (mVBleTextView != null) {
             mVBleTextView.append("消息显示\r\n");
+            mVBleTextView.setMovementMethod(ScrollingMovementMethod.getInstance());
         }
 
         // 蓝牙BLE初始化按钮
@@ -153,13 +155,32 @@ public class VbleSampleMainActivity extends AppCompatActivity {
             }
         });
 
+        mDisconnectVBleClient = (Button) findViewById(R.id.disconnectBtn);
+        mDisconnectVBleClient.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mVBleClient.VBleClient_DisconnectBLEClient();
+            }
+        });
+
+
         // 蓝牙BLE命令发送按钮
         mSendCommand = (Button) findViewById(R.id.CommandButton);
         mSendCommand.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // 发送接听电话消息
-                mVBleClient.VBleClient_CallAnswerCommand();
+                mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_ANSWER);
+            }
+        });
+
+        // 蓝牙BLE命令发送按钮
+        mSendCommand2 = (Button) findViewById(R.id.CommandButton2);
+        mSendCommand2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 发送挂断电话消息
+                mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_END);
             }
         });
 
@@ -172,16 +193,33 @@ public class VbleSampleMainActivity extends AppCompatActivity {
 
                 // 设置FM 频率，98.5 设置成 985
                 if (isCanSendCommand) {
-                    mVBleClient.VBleClient_FMReqCommand(fmReq);
+                    mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_SET_FM, fmReq);
                 } else {
                     Log.d(TAG, "mSendMsg.onClick: BLE is NOT connected");
                 }
             }
         });
 
-        mSendCommand.setEnabled(false);
-        mSendMsg.setEnabled(false);
+        SetButtonView(isCanSendCommand);
 
+    }
+
+    private void SetButtonView(boolean isGetChara) {
+        if (isGetChara) {
+            if (mInitVBleClient != null) mInitVBleClient.setEnabled(false);
+
+            if (mDisconnectVBleClient != null) mDisconnectVBleClient.setEnabled(true);
+            if (mSendCommand != null) mSendCommand.setEnabled(true);
+            if (mSendCommand2 != null) mSendCommand2.setEnabled(true);
+            if (mSendMsg != null) mSendMsg.setEnabled(true);
+        } else {
+            if (mInitVBleClient != null) mInitVBleClient.setEnabled(true);
+
+            if (mDisconnectVBleClient != null) mDisconnectVBleClient.setEnabled(false);
+            if (mSendCommand != null) mSendCommand.setEnabled(false);
+            if (mSendCommand2 != null) mSendCommand2.setEnabled(false);
+            if (mSendMsg != null) mSendMsg.setEnabled(false);
+        }
     }
 
     private void CheckBlePermission() {

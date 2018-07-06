@@ -8,29 +8,44 @@
 
     <TextView
         android:id="@+id/receiveTextView"
+        android:text=""
         android:layout_width="match_parent"
-        android:layout_height="317dp"
-        android:text="ReceiveTextView"
+        android:layout_height="353dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:scrollbarStyle="insideOverlay"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="5dp" />
 
+
     <Button
         android:id="@+id/initButton"
-        android:layout_width="wrap_content"
+        android:layout_width="120dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
         android:layout_below="@+id/receiveTextView"
-        android:text="初始化蓝牙BLE客户端"
+        android:layout_alignParentStart="true"
+        android:text="初始化 BLE Client"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="210dp" />
 
     <Button
         android:id="@+id/CommandButton"
-        android:layout_width="wrap_content"
+        android:layout_width="120dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/initButton"
+        android:layout_below="@+id/receiveTextView"
+        android:layout_centerHorizontal="true"
         android:text="发送接听电话消息" />
+
+    <Button
+        android:id="@+id/CommandButton2"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/receiveTextView"
+        android:layout_alignParentEnd="true"
+        android:text="发送挂断电话消息" />
+
 
     <RelativeLayout
         android:id="@+id/send_edit_layout"
@@ -48,6 +63,13 @@
             android:layout_alignParentStart="true"
             android:text="设置FM" />
 
+        <Button
+            android:id="@+id/disconnectBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentEnd="true"
+            android:text="断开连接" />
 
         <EditText
             android:id="@+id/msgSendText"
