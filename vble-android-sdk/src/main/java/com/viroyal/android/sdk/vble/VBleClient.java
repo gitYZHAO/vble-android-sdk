@@ -1,21 +1,18 @@
 package com.viroyal.android.sdk.vble;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
-import android.content.ContextWrapper;
 import android.content.pm.PackageManager;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothManager;
 import android.os.Build;
-import android.os.ParcelUuid;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
@@ -114,23 +111,16 @@ public class VBleClient {
                 if (s[1] == null) return false;
                 if (s[1].length() == 0) return false;
 
-                String chara = s[1];
-
-                byte[] arrayOfByte1 = new byte[20];
-                byte[] arrayOfByte2 = new byte[20];
-                arrayOfByte2[0] = 0;
-                mNotifyCharacteristic.setValue(arrayOfByte2[0], 17, 0);
+                String tempCharacteristic = s[1];
 
                 // NOTE:
                 // 1. 带参数命令包含"=" 符号
                 // 2. 参数不做判断，只要不为空，变添加到AT命令末尾
                 if (s[1].contains("=") && ext != null) {
-                    chara += ext;
+                    tempCharacteristic += ext;
                 }
-                Log.d(TAG, "VBleClient_SendCommand: sendCharacteristic=" + chara);
-                arrayOfByte1 = chara.getBytes();
-                mNotifyCharacteristic.setValue(arrayOfByte1);
-
+                Log.d(TAG, "VBleClient_SendCommand: sendCharacteristic=" + tempCharacteristic);
+                mNotifyCharacteristic.setValue(tempCharacteristic.getBytes());
 
                 return mBluetoothGatt.writeCharacteristic(mNotifyCharacteristic);
             }
@@ -156,7 +146,7 @@ public class VBleClient {
             if (isFindSpecDevice) {
                 Log.d(TAG, "onLeScan: Find the Spec device：" + device.getName()
                         + ",add=" + device.getAddress()
-                        + " ,uuid=" + device.getUuids());
+                        + " ,uuid=" + device.getUuids().toString());
 
                 mVBleStatus = VBleResult.VBLE_STATUS_SCANNED;
                 VBleResult result = new VBleResult(VBleResult.VBLE_OPERATOR_CONTROL,
@@ -181,7 +171,7 @@ public class VBleClient {
     };
 
     private void ConnectBLEService() {
-        final UUID[] mSpecUUID = {SPECIFIC_SERVICE_UUID};
+        //final UUID[] mSpecUUID = {SPECIFIC_SERVICE_UUID};
 
         if (mBluetoothAdapter != null) {
             // 首先扫描指定设备
@@ -300,9 +290,13 @@ public class VBleClient {
     private void EnableCharacteristicNotify() {
         if (mBluetoothGatt != null && mNotifyCharacteristic != null) {
             boolean ret = mBluetoothGatt.setCharacteristicNotification(mNotifyCharacteristic, true);
-
             if (!ret) {
                 Log.d(TAG, "EnableCharacteristicNotify is fail!");
+            } else {
+                for (BluetoothGattDescriptor dp : mNotifyCharacteristic.getDescriptors()) {
+                    dp.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                    mBluetoothGatt.writeDescriptor(dp);
+                }
             }
         }
     }
