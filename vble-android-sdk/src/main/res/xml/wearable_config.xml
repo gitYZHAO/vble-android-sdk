@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<wearable_config version="1">
+    <!--
+         SmartDevice APK GATT(DOGP, data over gatt profile) send data max size in Write Characteristic setValue method,
+         such as 20 ~ 509 byte. (=MTU-3, MTU range 23 ~ 512 byte, ATT Data Header size is 3 bytes)
+         Device GATT max MTU is 512 byte, APK could increase DOGP transfer rate if APK set larger gatt_value_size.
+         But the feature only is supported by a part of Android Smart Phone(API 21 or higher).
+
+         Note: MTK Chip + Android L SP could not suppot requestMTU feature.
+    -->
+    <int name="gatt_value_size_for_LMN">509</int>
+
+    <!-- These SPs in RequestMTU Black List cannot request MTU -->
+    <!-- Such as Mi-4c,SP-One,SP-two -->
+    <string name="GATT_RequestMTU_BlackList">Mi-4c,X900+,ONE A2001,P680D,P680L,D6653,E6553</string>
+
+    <!-- Device BTNotify SPP UUID -->
+    <string name="spp_uuid">0000FF01-0000-1000-8000-00805F9B34FF</string>
+
+    <!-- Device BTNotify GATT(DOGP) UUID -->
+    <string name="dogp_uuid">000018A0-0000-1000-8000-00805F9B34FB</string>
+    <string name="dogp_read_uuid">00002AA0-0000-1000-8000-00805F9B34FB</string>
+    <string name="dogp_write_uuid">00002AA1-0000-1000-8000-00805F9B34FB</string>
+
+    <!-- Indicates to whether support auto reconnect -->
+    <!-- If support, the device will scan last connected device and connect it
+         after connecton is disconnected exceptionally.
+         Applied to GATT and SPP.
+    -->
+    <bool name="enable_auto_reconnect">true</bool>
+
+    <!-- SmartDevice APK GATT/SPP scan max time for reconnect, Unit: second, such as 30s ~ 60 * 60s.
+         APK will scan the last connected BTNotify GATT/SPP device and connect it
+         after BTNotify GATT/SPP disconnected suddenly (not user operation, i.e. call WearableManager.disconnect API).
+         The APK will scan 3*60 seconds util scanned the device or timeout.
+         Applied to GATT and SPP.
+    -->
+    <int name="gatt_reconnect_time">180</int>
+
+    <!-- MT2511 Feature Option.(App)
+         If 'mt2511_feature' set true, APK will enable MT2511 health features.
+         Otherwise, they will be disable.
+    -->
+    <bool name="mt2511_feature">false</bool>
+
+    <!-- Indicates to whether enable wearable SPP/GATT Debug log -->
+    <bool name="wearable_debug_log">false</bool>
+
+    <!-- Indicates to whether enable SPP auto-reconnect based on A2DP/HFP Connection -->
+    <!-- By default, SPP reconnect by scanning last connected BTNotify Device,
+         But SPP also could reconnect based on A2DP/HFP connection, as long as your IoT device
+         support A2DP or HFP.
+         If turn on the 'spp_a2dp_hfp_reconnect', once an A2DP/HFP device connected SP successfully,
+         the wearable library will try to connect that A2DP/HFP device.
+         You could enable "initBTProxy" in BTNotificationApplication class,
+         it will enhance "spp_a2dp_hfp_reconnect" feature.
+         If that A2DP/HFP device is MT2523/MT2533 device and support BTNotify protocol,
+         then connect successfully; otherwise, connect fail.
+    -->
+    <bool name="spp_a2dp_hfp_reconnect">false</bool>
+
+    <!-- Enable SPP ACK Feature -->
+    <!-- By default, APK must wait device ACK after send Cmd/Data in SPP mode.
+         Unless received ACK, APK cannot send next package.
+
+         The feature is added for new IoT SDK (4.3.1+) in order to fix Device OOM when start SPP FOTA on doing A2DP+AWS.
+         If your device haven't A2DP+AWS feature, you could turn off the feature.
+    -->
+    <bool name="enable_spp_ack">false</bool>
+
+</wearable_config>

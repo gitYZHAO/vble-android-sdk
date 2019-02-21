@@ -27,51 +27,53 @@ compile project(':vble-android-sdk')
 
 初始化VBleClient，并使用VBleCallback回调接收状态和消息
 ```
-    mVBleClient = new VBleClient(getApplicationContext(), new VBleCallback() {
-        @Override
-        public void onVBleStatusCallback(VBleResult result) {
-            //获取BLE状态更新
-        }
+        bleClient = VBleClient.getInstance();
+        bleClient.init(this.getApplication(), new IVBleCallback() {
+            @Override
+            public void onVBleStatusCallback(int state) {
+                //获取BLE状态更新
+            }
 
-        @Override
-        public void onVBleCommandCallback(String whatCommand, boolean isSuccessful) {
-            //获取已知的命令的状态返回
-        }
+            @Override
+            public void onVBleCommandCallback(String whatCommand, boolean isSuccessful) {
+                //获取已知的命令的状态返回
+            }
 
-        @Override
-        public void processUnsolicitedMsg(String unsolicitedMsg) {
-            //处理为止的消息上报
-        }
-    });
+            @Override
+            public void processUnsolicitedMsg(String unsolicitedMsg) {
+                //处理为止的消息上报
+            }
+        });
+        
+```
+#使用：
+
+一般使用请参考：
+VbleSampleMainActivity.java
+```
+        // 获取版本号
+        bleClient.getFirmwareVersion();
+
+
+        // 设置FM 频率，98.5 设置成 985
+        bleClient.setFM(mSetFMReq.getText().toString());
+
 ```
 
-初始化BLE Client的连接和获取指定的BLE characteristic
+OTA升级参考：
+FirmwareUpdateActivity.java
 ```
-        mVBleClient.VBleClient_InitBLEClient(getApplicationContext());
+        // 实例化对象
+        mFU = new FirmwareUpdateAdapter(getApplicationContext());
+        // 初始化WearableFota
+        mFU.initWearableFota();
+         // 设置需要升级的BLE设备
+        mFU.setRemoteDevice(VBleClient.getInstance().getConnectedBLEDevice());
+         // 设置回调，接收OTA升级消息
+        mFU.setFirmwareUpdateCB(cb);
 ```
 
-使用VBleClient_SendCommand接口发送（指定的）消息
-```
+#注意：
+设计根据当前已经连接好的蓝牙Audio判断与哪个BLE设备连接。
 
-    public final static String VBLE_COMMAND_CALL_ANSWER = "CALL_ANSWER";
-    public final static String VBLE_COMMAND_CALL_END = "CALL_END";
-    public final static String VBLE_COMMAND_MAKE_CALL = "MAKE_CALL";
-    public final static String VBLE_COMMAND_WAKE_UP = "WAKE_UP";
-    public final static String VBLE_COMMAND_SET_FM = "SET_FM";
 
-    // 发送接听电话消息
-    if (isCanSendCommand) {
-        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_ANSWER);
-    }
-
-    // 发送挂断电话消息
-    if (isCanSendCommand) {
-        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_CALL_END);
-    }
-
-    // 设置FM 频率，98.5 设置成 字符串 "985"
-    if (isCanSendCommand) {
-        mVBleClient.VBleClient_SendCommand(VBleClient.VBLE_COMMAND_SET_FM ,fmReq);
-    }
-                
-```
