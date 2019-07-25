@@ -1,1 +1,1 @@
-include ':app', ':vble-android-sdk'
+include ':app', ':vble-android-sdk', ':eventBus'
