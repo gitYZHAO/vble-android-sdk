@@ -1,4 +1,4 @@
-# viroyal-ble-android-sdk 简介
+# vble-android-sdk 简介
 一个控制BLE GATT Client 的SDK(vble-android-sdk) 及其 示例。
 
 # 环境要求
